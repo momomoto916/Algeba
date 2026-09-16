@@ -1,0 +1,28 @@
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies & build output
+node_modules/
+frontend/dist/
+Contracts/out/
+Contracts/cache/
+Contracts/broadcast/
+
+# Logs
+*.log
+
+# Local Claude Code settings
+.claude/
+
+# Local planning / change notes (not part of the project)
+text.md
+frontend/*.md
+!frontend/README.md

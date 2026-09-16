@@ -1,0 +1,22 @@
+[profile.default]
+src = "."
+test = "test"
+out = "out"
+libs = ["lib"]
+solc = "0.8.24"
+optimizer = true
+optimizer_runs = 200
+
+remappings = [
+    "@openzeppelin/=../frontend/node_modules/@openzeppelin/",
+    "@layerzerolabs/=../frontend/node_modules/@layerzerolabs/",
+    "forge-std/=lib/forge-std/src/",
+]
+
+allow_paths = ["../frontend/node_modules"]
+
+# Enables test/helpers/FfiMerkleTree.sol to shell out to the real
+# @openzeppelin/merkle-tree JS library, so Merkle tests validate against the
+# same tool used at deploy time (scripts/build-genesis-whitelist.mjs) rather
+# than a hand-rolled Solidity reimplementation that could silently diverge.
+ffi = true

@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #1A1F3D;
+  --color-navy-hover: #11142B;
+  --color-platinum: #E5E4E2;
+  --color-platinum-dark: #CFCDC9;
+  --color-muted: rgba(26, 31, 61, 0.62);
+  --color-surface: #F7F7F6;
+
+  /* Flatter, denser radius scale (Etherscan-style) */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.3125rem;
+  --radius-lg: 0.375rem;
+
+  /* Minimal, navy-tinted shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 31, 61, 0.04);
+  --shadow-md: 0 2px 6px rgba(26, 31, 61, 0.08);
+  --shadow-lg: 0 4px 16px rgba(26, 31, 61, 0.12);
+}
+
+@source not "../*.md";
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply bg-surface text-navy antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-navy font-semibold mt-0;
+    line-height: 1.25;
+  }
+
+  h1 { font-size: 1.375rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.0625rem; }
+  h4 { font-size: 0.9375rem; }
+  h5 { font-size: 0.875rem; }
+  h6 { font-size: 0.8125rem; }
+
+  #root {
+    @apply w-full;
+    min-height: 100svh;
+  }
+}
+
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-white border border-platinum-dark rounded-md shadow-sm transition-shadow duration-150;
+  }
+  .card:hover {
+    @apply shadow-md;
+  }
+  .card-body {
+    padding: 1.5rem;
+  }
+  .card-header {
+    @apply border-b border-platinum-dark bg-surface;
+    padding: 1.125rem 1.5rem;
+  }
+  .card-footer {
+    @apply border-t border-platinum-dark bg-platinum;
+    padding: 1rem 1.5rem;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-sm font-medium text-sm border-none cursor-pointer no-underline transition-colors duration-150;
+    padding: 0.4rem 0.875rem;
+  }
+  .btn-primary {
+    @apply bg-navy text-white;
+  }
+  .btn-primary:hover {
+    @apply bg-navy-hover;
+  }
+  .btn-secondary {
+    @apply bg-white text-navy border border-platinum-dark;
+  }
+  .btn-secondary:hover {
+    @apply bg-platinum;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-navy border border-navy;
+  }
+  .btn-ghost:hover {
+    @apply bg-platinum;
+  }
+
+  /* Tables */
+  table {
+    @apply w-full border-collapse text-sm;
+  }
+  th {
+    @apply bg-surface text-muted font-semibold uppercase text-left border-b border-platinum-dark;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    padding: 0.875rem 1.125rem;
+  }
+  td {
+    @apply border-b border-platinum;
+    padding: 0.875rem 1.125rem;
+  }
+  tr:hover {
+    @apply bg-surface;
+  }
+
+  /* Forms */
+  input, textarea, select {
+    @apply w-full border border-platinum-dark rounded-sm text-navy bg-white transition-colors duration-150;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  input:focus, textarea:focus, select:focus {
+    @apply outline-none border-navy;
+    box-shadow: 0 0 0 0.15rem rgba(26, 31, 61, 0.1);
+  }
+  input::placeholder {
+    @apply text-muted;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center rounded-sm font-semibold uppercase;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  /* Alerts */
+  .alert {
+    @apply rounded-sm border;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    font-size: 0.8125rem;
+  }
+  .alert-primary {
+    @apply text-navy;
+    background-color: rgba(26, 31, 61, 0.05);
+    border-color: rgba(26, 31, 61, 0.2);
+  }
+  .alert-danger {
+    @apply bg-navy border-navy text-white;
+  }
+
+  /* Page header */
+  .page-header {
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+  }
+  .page-title {
+    @apply font-bold m-0;
+    font-size: 1.375rem;
+  }
+  .page-subtitle {
+    @apply text-muted;
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-0 border-t border-platinum-dark;
+    margin: 1rem 0;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply text-muted font-medium rounded-sm no-underline transition-colors duration-150;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+  .nav-link:hover {
+    @apply text-navy bg-surface;
+  }
+  .nav-link.active {
+    @apply text-white bg-navy;
+  }
+}

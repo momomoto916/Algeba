@@ -1,0 +1,615 @@
+/* ALGEBA whitepaper — an editorial treatment scoped to /whitepaper.
+   Every rule is namespaced under .wp-doc so the site's global `table`,
+   `th`, `td` and `.card` component styles cannot collide with it.
+   Palette is derived from the site's navy/platinum theme rather than a
+   second one: navy is the ink, platinum the rules, with a single oxide
+   accent reserved for the two places that must read as "caution". */
+
+.wp-doc {
+  --wp-ink: #1A1F3D;
+  --wp-ink-soft: #3B4160;
+  --wp-muted: rgba(26, 31, 61, 0.62);
+  --wp-rule: #CFCDC9;
+  --wp-rule-faint: #E5E4E2;
+  --wp-paper: #FFFFFF;
+  --wp-surface: #F7F7F6;
+  --wp-accent: #1A1F3D;
+  --wp-oxide: #9C3A2C;
+  --wp-oxide-wash: rgba(156, 58, 44, 0.07);
+
+  --wp-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --wp-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --wp-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --wp-measure: 34rem;
+  --wp-rail: 11rem;
+
+  color: var(--wp-ink);
+  max-width: 62rem;
+  margin: 0 auto;
+  padding-bottom: 4rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+/* ---------- masthead ---------- */
+
+.wp-masthead { padding: 3.5rem 0 3rem; border-bottom: 1px solid var(--wp-rule); }
+
+.wp-sigil {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  font-family: var(--wp-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin-bottom: 2.25rem;
+}
+.wp-sigil .wp-live { color: var(--wp-oxide); }
+.wp-sigil .wp-live::before { content: "● "; }
+
+.wp-doc h1.wp-title {
+  font-family: var(--wp-display);
+  font-weight: 300;
+  font-size: clamp(2.6rem, 7vw, 4.6rem);
+  line-height: 1;
+  letter-spacing: -0.025em;
+  margin: 0 0 1.5rem;
+  text-wrap: balance;
+  color: var(--wp-ink);
+}
+.wp-doc h1.wp-title em { font-style: italic; }
+
+.wp-identity {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35em 0.7em;
+  font-family: var(--wp-mono);
+  font-weight: 500;
+  font-size: clamp(1.3rem, 5vw, 2.5rem);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 0.55rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--wp-rule);
+}
+.wp-identity em { font-style: normal; color: var(--wp-oxide); font-weight: 400; }
+
+.wp-identity-note {
+  font-family: var(--wp-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin: 0 0 2.25rem;
+}
+
+.wp-standfirst {
+  font-family: var(--wp-display);
+  font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+  font-weight: 300;
+  line-height: 1.5;
+  color: var(--wp-ink-soft);
+  max-width: 38rem;
+  margin: 0 0 2.25rem;
+}
+
+.wp-colophon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem 2.75rem;
+  font-family: var(--wp-mono);
+  font-size: 0.72rem;
+  margin: 0;
+}
+.wp-colophon dt {
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin-bottom: 0.3rem;
+}
+.wp-colophon dd { margin: 0; font-weight: 500; }
+
+/* ---------- prologue ---------- */
+
+.wp-prologue { padding: 3.5rem 0; border-bottom: 1px solid var(--wp-rule-faint); }
+.wp-prologue-label {
+  font-family: var(--wp-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin: 0 0 1.75rem;
+}
+.wp-tale {
+  max-width: 36rem;
+  font-family: var(--wp-display);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  font-weight: 300;
+  line-height: 1.62;
+  color: var(--wp-ink);
+}
+.wp-tale p { margin: 0; }
+.wp-tale p + p { margin-top: 1.1rem; }
+.wp-tale p:first-child::first-letter {
+  float: left;
+  font-size: 3.5em;
+  line-height: 0.8;
+  padding-right: 0.09em;
+  padding-top: 0.05em;
+  font-weight: 400;
+}
+.wp-tale .wp-beat { font-style: italic; }
+.wp-tale .wp-close {
+  border-top: 1px solid var(--wp-rule);
+  padding-top: 1.1rem;
+  margin-top: 1.5rem;
+}
+
+/* ---------- section scaffold ---------- */
+
+/* Column 1 is the rail's alone and column 2 carries every content block.
+   Both are assigned explicitly: a child left to auto-placement (or spanning
+   1 / -1) lands under the sticky rail, which then scrolls down over it. */
+.wp-section {
+  display: grid;
+  grid-template-columns: var(--wp-rail) minmax(0, 46rem);
+  gap: 0 3.5rem;
+  padding: 3.25rem 0;
+  border-bottom: 1px solid var(--wp-rule-faint);
+  align-items: start;
+}
+.wp-section:last-of-type { border-bottom: 0; }
+
+.wp-rail {
+  grid-column: 1;
+  position: sticky;
+  top: 1.5rem;
+  font-family: var(--wp-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.wp-rail b { color: var(--wp-ink); font-weight: 600; font-size: 0.76rem; letter-spacing: 0.1em; }
+.wp-gloss {
+  /* Not `inherit` — that picks up the rail's monospace and makes the
+     marginal notes read as code. */
+  font-family: var(--wp-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--wp-muted);
+  border-left: 1px solid var(--wp-rule);
+  padding-left: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+
+/* Running text keeps a readable measure; data blocks (stat grids, equations,
+   tables, contract lists) break out to the full column, which is what stops a
+   four-cell grid from wrapping 3 + 1 and leaving dead space beside the orphan. */
+.wp-body { grid-column: 2; }
+.wp-body > * { margin: 0; }
+.wp-body > * + * { margin-top: 1.05rem; }
+.wp-body > p,
+.wp-body > h2,
+.wp-body > h3,
+.wp-body > ul,
+.wp-body > ol { max-width: var(--wp-measure); }
+
+.wp-doc .wp-body h2 {
+  font-family: var(--wp-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 3.6vw, 2.15rem);
+  line-height: 1.14;
+  letter-spacing: -0.015em;
+  margin-bottom: 1.3rem;
+  text-wrap: balance;
+}
+.wp-doc .wp-body h3 {
+  font-family: var(--wp-mono);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin-top: 2.1rem;
+}
+.wp-body p { color: var(--wp-ink-soft); }
+.wp-body p.wp-lead {
+  font-family: var(--wp-display);
+  font-size: 1.2rem;
+  line-height: 1.55;
+  color: var(--wp-ink);
+}
+.wp-body strong { font-weight: 600; color: var(--wp-ink); }
+.wp-body ul, .wp-body ol { padding-left: 1.2rem; color: var(--wp-ink-soft); }
+.wp-body li + li { margin-top: 0.45rem; }
+
+.wp-doc code {
+  font-family: var(--wp-mono);
+  font-size: 0.86em;
+  background: var(--wp-surface);
+  border: 1px solid var(--wp-rule-faint);
+  color: var(--wp-ink);
+  padding: 0.08em 0.36em;
+  border-radius: 2px;
+}
+
+/* ---------- Q & A ---------- */
+
+.wp-qa { grid-column: 2; }
+.wp-qa dl { margin: 0; }
+.wp-pair { padding: 1.3rem 0; border-top: 1px solid var(--wp-rule-faint); }
+.wp-pair:first-child { border-top: 1px solid var(--wp-rule); }
+/* Scoped to .wp-pair, not `.wp-qa dt` — the state panel's <dl> also lives
+   inside .wp-qa, and a looser selector stamps "Q." onto every stat label. */
+.wp-pair > dt {
+  font-family: var(--wp-display);
+  font-size: 1.18rem;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 0.45rem;
+  text-wrap: balance;
+}
+.wp-pair > dt::before {
+  content: "Q.";
+  font-family: var(--wp-mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--wp-muted);
+  margin-right: 0.55rem;
+  vertical-align: 0.15em;
+}
+.wp-pair > dd { margin: 0; color: var(--wp-ink-soft); }
+.wp-pair > dd + dd { margin-top: 0.65rem; }
+.wp-pair > dd.wp-terse {
+  font-family: var(--wp-display);
+  font-style: italic;
+  font-size: 1.28rem;
+  color: var(--wp-ink);
+}
+
+/* ---------- devices ---------- */
+
+.wp-axiom {
+  font-family: var(--wp-display);
+  font-size: clamp(1.3rem, 3vw, 1.75rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.38;
+  color: var(--wp-ink);
+  border-left: 2px solid var(--wp-ink);
+  padding-left: 1.4rem;
+  margin: 1.9rem 0 !important;
+  text-wrap: balance;
+}
+
+.wp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 1px;
+  background: var(--wp-rule-faint);
+  border: 1px solid var(--wp-rule-faint);
+  margin: 1.9rem 0 !important;
+}
+.wp-cell { background: var(--wp-paper); padding: 1rem 1.1rem 1.1rem; }
+.wp-cell dt {
+  font-family: var(--wp-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin-bottom: 0.5rem;
+}
+.wp-cell dd {
+  margin: 0;
+  font-family: var(--wp-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.wp-cell dd small {
+  display: block;
+  font-family: var(--wp-sans);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--wp-muted);
+  margin-top: 0.28rem;
+  letter-spacing: 0;
+}
+
+/* ---------- live state ---------- */
+
+.wp-state { margin-top: 2.25rem; }
+.wp-state-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.3rem 1.5rem;
+  font-family: var(--wp-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--wp-rule);
+}
+.wp-state-head b { color: var(--wp-ink); font-weight: 600; }
+.wp-state .wp-grid { margin-top: 0 !important; border-top: 0; }
+.wp-tag {
+  display: inline-block;
+  font-family: var(--wp-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wp-oxide);
+  background: var(--wp-oxide-wash);
+  padding: 0.1em 0.38em;
+  border-radius: 2px;
+  margin-right: 0.4em;
+  vertical-align: 0.05em;
+}
+.wp-state-note { font-size: 0.83rem; color: var(--wp-muted); margin: 0.9rem 0 0; max-width: 38rem; }
+.wp-pending { color: var(--wp-muted); }
+
+/* ---------- contracts ---------- */
+
+.wp-contracts {
+  display: grid;
+  gap: 1px;
+  background: var(--wp-rule-faint);
+  border: 1px solid var(--wp-rule-faint);
+  margin: 1.5rem 0 !important;
+}
+.wp-contracts a, .wp-contracts .wp-norepo {
+  display: block;
+  background: var(--wp-paper);
+  padding: 0.9rem 1.05rem;
+  text-decoration: none;
+  color: inherit;
+}
+.wp-contracts a:hover { background: var(--wp-surface); }
+.wp-contracts .wp-lbl {
+  display: block;
+  font-family: var(--wp-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  margin-bottom: 0.35rem;
+}
+.wp-contracts .wp-addr {
+  font-family: var(--wp-mono);
+  font-size: 0.76rem;
+  word-break: break-all;
+  line-height: 1.5;
+}
+.wp-contracts a:hover .wp-addr { text-decoration: underline; }
+.wp-contracts .wp-norepo .wp-addr { color: var(--wp-muted); font-style: italic; }
+
+/* ---------- equations ---------- */
+
+.wp-eq {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: var(--wp-surface);
+  border-left: 2px solid var(--wp-ink);
+  padding: 1.05rem 1.15rem;
+  margin: 1.3rem 0 !important;
+  overflow-x: auto;
+}
+.wp-eq-body {
+  font-family: var(--wp-display);
+  font-size: clamp(1rem, 2.4vw, 1.25rem);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.wp-eq-tag { font-family: var(--wp-mono); font-size: 0.66rem; color: var(--wp-muted); flex-shrink: 0; }
+.wp-v { font-style: italic; }
+.wp-op { color: var(--wp-muted); padding-inline: 0.35em; }
+.wp-eq sub, .wp-eq sup { font-size: 0.62em; font-style: normal; }
+.wp-lit { font-family: var(--wp-mono); font-size: 0.8em; font-variant-numeric: tabular-nums; }
+
+.wp-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin-inline: 0.35em;
+  font-size: 0.9em;
+}
+.wp-frac > span { padding-inline: 0.35em; }
+.wp-frac > span:last-child { border-top: 1px solid currentColor; }
+
+.wp-bigop {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  margin-inline: 0.25em;
+  line-height: 1;
+}
+.wp-bigop .wp-glyph { font-size: 1.7em; line-height: 0.85; font-style: normal; }
+.wp-bigop .wp-limit {
+  font-family: var(--wp-mono);
+  font-size: 0.4em;
+  font-style: normal;
+  color: var(--wp-muted);
+}
+
+.wp-legend {
+  font-family: var(--wp-mono);
+  font-size: 0.72rem;
+  line-height: 1.75;
+  color: var(--wp-muted);
+  border-left: 1px solid var(--wp-rule);
+  padding-left: 1rem;
+  margin: 1.5rem 0 !important;
+}
+.wp-legend b {
+  color: var(--wp-ink);
+  font-family: var(--wp-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.1em;
+}
+
+/* ---------- bisection figure ---------- */
+
+.wp-figure { grid-column: 2; margin-top: 2.75rem; }
+.wp-fig-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.4rem 1.5rem;
+  font-family: var(--wp-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--wp-rule);
+}
+.wp-fig-head b { color: var(--wp-ink); font-weight: 600; }
+
+.wp-bisection { display: flex; gap: 1px; height: 5.25rem; margin-top: 1.3rem; }
+.wp-term { position: relative; min-width: 0; }
+.wp-term span {
+  position: absolute;
+  top: 0.55rem;
+  left: 0.55rem;
+  right: 0.35rem;
+  font-family: var(--wp-mono);
+  font-size: 0.64rem;
+  line-height: 1.35;
+  color: #FFFFFF;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+}
+.wp-term span b { display: block; font-weight: 600; letter-spacing: 0.12em; }
+
+.wp-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.65rem;
+  font-family: var(--wp-mono);
+  font-size: 0.64rem;
+  color: var(--wp-muted);
+  font-variant-numeric: tabular-nums;
+}
+.wp-scale .wp-bound { color: var(--wp-oxide); }
+
+.wp-residue {
+  margin-top: 1.4rem;
+  padding: 0.95rem 1.15rem;
+  background: var(--wp-oxide-wash);
+  border-left: 2px solid var(--wp-oxide);
+  font-size: 0.88rem;
+  color: var(--wp-ink-soft);
+  max-width: 40rem;
+}
+.wp-residue b { color: var(--wp-oxide); font-weight: 600; }
+
+/* ---------- table (scoped: beats the site's global th/td padding) ---------- */
+
+.wp-table-wrap { overflow-x: auto; margin: 1.9rem 0 !important; border-top: 1px solid var(--wp-rule); border-bottom: 1px solid var(--wp-rule); }
+.wp-doc .wp-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--wp-mono);
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 30rem;
+}
+.wp-doc .wp-table-wrap th {
+  background: transparent;
+  text-align: right;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wp-muted);
+  font-weight: 500;
+  padding: 0.8rem 0.65rem;
+  border-bottom: 1px solid var(--wp-rule);
+}
+.wp-doc .wp-table-wrap th:first-child,
+.wp-doc .wp-table-wrap td:first-child { text-align: left; }
+.wp-doc .wp-table-wrap td {
+  text-align: right;
+  padding: 0.5rem 0.65rem;
+  color: var(--wp-ink-soft);
+  border-bottom: 1px solid var(--wp-rule-faint);
+}
+.wp-doc .wp-table-wrap tbody tr:last-child td { border-bottom: 0; }
+.wp-doc .wp-table-wrap tbody tr:hover { background: var(--wp-surface); }
+.wp-doc .wp-table-wrap td:first-child { color: var(--wp-ink); font-weight: 500; }
+.wp-doc .wp-table-wrap tr.wp-clamp td { color: var(--wp-oxide); }
+
+/* ---------- closing ---------- */
+
+.wp-notice {
+  grid-column: 2;
+  background: var(--wp-surface);
+  border: 1px solid var(--wp-rule);
+  padding: 1.6rem;
+  max-width: 48rem;
+}
+.wp-doc .wp-notice h3 {
+  font-family: var(--wp-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--wp-oxide);
+  margin: 0 0 0.9rem;
+}
+.wp-notice p { font-size: 0.86rem; color: var(--wp-muted); margin: 0; }
+.wp-notice p + p { margin-top: 0.75rem; }
+
+.wp-end {
+  padding-top: 3rem;
+  font-family: var(--wp-mono);
+  font-size: 0.68rem;
+  color: var(--wp-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 2rem;
+  justify-content: space-between;
+  border-top: 1px solid var(--wp-rule-faint);
+}
+
+@media (max-width: 860px) {
+  .wp-doc { --wp-rail: auto; }
+  .wp-section { grid-template-columns: minmax(0, 1fr); gap: 1.4rem; }
+  /* One column now, so every block returns to it — an explicit `2` here
+     would conjure an empty implicit column and push content off-screen. */
+  .wp-rail, .wp-body, .wp-qa, .wp-figure, .wp-notice { grid-column: 1; }
+  .wp-body { max-width: none; }
+  .wp-rail {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 1rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid var(--wp-rule-faint);
+  }
+  .wp-gloss { display: none; }
+  .wp-masthead { padding-top: 2.5rem; }
+  .wp-bisection { height: 4.25rem; }
+  .wp-term span { font-size: 0.58rem; }
+}
