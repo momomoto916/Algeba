@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Header } from './components/Header';
 import { WalletProvider } from './context/WalletContext';
 import { NetworkProvider, useNetwork } from './context/NetworkContext';
-import { REOWN_PROJECT_ID } from './config/constants';
+import { REOWN_PROJECT_ID, REPO_URL } from './config/constants';
 import { Home } from './pages/Home';
 import { GenesisPage } from './pages/GenesisPage';
 import { Whitepaper } from './pages/Whitepaper';
@@ -60,6 +60,11 @@ function Layout() {
                   <li>
                     <a href="/security" className="text-sm hover:underline text-navy">
                       Security &amp; Audits
+                    </a>
+                  </li>
+                  <li>
+                    <a href={REPO_URL} target="_blank" rel="noopener noreferrer" className="text-sm hover:underline text-navy">
+                      Open Source
                     </a>
                   </li>
                 </ul>

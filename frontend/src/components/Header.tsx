@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { requestWalletConnection, disconnectWallet, isDeployerWallet } from '../utils/wallet';
+import { isDeployerWallet } from '../utils/wallet';
 import { useWallet } from '../context/WalletContext';
 import { useNetwork } from '../context/NetworkContext';
 import { NETWORKS, type NetworkKey } from '../config/networks';
 import { ensureChain } from '../utils/chainSwitch';
-import type { Address } from 'viem';
 import { formatAddress } from '../utils/formatting';
 import logoAlgeba from '../assets/logo-algeba.png';
 
@@ -17,9 +16,8 @@ const NAV_LINKS = [
 ];
 
 export function Header() {
-  const { walletAddress, isConnected, setWalletAddress, setIsConnected } = useWallet();
+  const { walletAddress, isConnected, isConnecting: isLoading, connect, disconnect } = useWallet();
   const { networkKey, setNetworkKey } = useNetwork();
-  const [isLoading, setIsLoading] = useState(false);
   const [isSwitchingNetwork, setIsSwitchingNetwork] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const showDeployLink = isConnected && isDeployerWallet(walletAddress);
@@ -45,25 +43,14 @@ export function Header() {
   };
 
   const handleConnect = async () => {
-    setIsLoading(true);
     try {
-      const wallet = await requestWalletConnection();
-      if (wallet.isConnected && wallet.address) {
-        setIsConnected(true);
-        setWalletAddress(wallet.address as Address);
-      }
+      await connect();
     } catch (error) {
       console.error('Wallet connection error:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleDisconnect = () => {
-    const wallet = disconnectWallet();
-    setIsConnected(wallet.isConnected);
-    setWalletAddress(wallet.address);
-  };
+  const handleDisconnect = disconnect;
 
   return (
     <header className="sticky top-0 z-50 border-b border-platinum-dark bg-white">

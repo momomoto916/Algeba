@@ -9,7 +9,7 @@ export async function getContractStats(publicClient: PublicClient | null, contra
   }
 
   try {
-    const [totalSupply, emittedSupply, stakingMinted, remainingEmission, totalStaked, genesisParticipants, currentEpoch, emissionPerSecond, nextHalvingTime] = await Promise.all([
+    const [totalSupply, emittedSupply, stakingMinted, remainingEmission, totalStaked, genesisParticipants, currentEpoch, emissionPerSecond, nextHalvingTime, startTime, halvingPeriod] = await Promise.all([
       publicClient.readContract({
         address: contracts.ALGEBA as Address,
         abi: ALGEBA_ABI,
@@ -55,6 +55,16 @@ export async function getContractStats(publicClient: PublicClient | null, contra
         abi: STAKING_ABI,
         functionName: 'nextHalvingTime',
       }) as Promise<bigint>,
+      publicClient.readContract({
+        address: contracts.STAKING as Address,
+        abi: STAKING_ABI,
+        functionName: 'startTime',
+      }) as Promise<bigint>,
+      publicClient.readContract({
+        address: contracts.STAKING as Address,
+        abi: STAKING_ABI,
+        functionName: 'halvingPeriod',
+      }) as Promise<bigint>,
     ]);
 
     return {
@@ -67,6 +77,8 @@ export async function getContractStats(publicClient: PublicClient | null, contra
       currentEpoch,
       emissionPerSecond,
       nextHalvingTime,
+      startTime,
+      halvingPeriod,
     };
   } catch (error) {
     console.error('Error fetching contract stats:', error);

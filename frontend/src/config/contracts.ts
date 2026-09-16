@@ -231,6 +231,20 @@ export const STAKING_ABI = [
   },
   {
     "inputs": [],
+    "name": "startTime",
+    "outputs": [{ "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "halvingPeriod",
+    "outputs": [{ "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "currentEpoch",
     "outputs": [{ "type": "uint256" }],
     "stateMutability": "view",

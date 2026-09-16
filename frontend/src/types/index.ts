@@ -21,6 +21,8 @@ export interface ContractStats {
   currentEpoch: bigint;
   emissionPerSecond: bigint;
   nextHalvingTime: bigint;
+  startTime: bigint;
+  halvingPeriod: bigint;
 }
 
 export interface UserData {

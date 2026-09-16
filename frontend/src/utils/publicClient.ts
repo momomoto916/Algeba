@@ -11,6 +11,10 @@ import type { NetworkConfig } from '../config/networks';
 export function createNetworkPublicClient(network: NetworkConfig) {
   return createPublicClient({
     chain: network.chain,
+    // Readings fired in the same tick (e.g. the 9 stats reads) are folded into
+    // one Multicall3 eth_call. Fewer requests means the free public RPC stops
+    // rate-limiting us, which is what made sections vanish and reappear.
+    batch: { multicall: true },
     transport: http(network.rpcUrl, {
       timeout: 10_000,
       retryCount: 3,

@@ -2,6 +2,8 @@
 
 ALGEBA token ecosystem: Genesis event, staking with emissions, and cross-chain OFT (LayerZero).
 
+Repository: https://github.com/momomoto916/Algeba
+
 ## Structure
 
 | Folder | Description |

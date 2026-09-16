@@ -1,31 +1,67 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { GenesisStatus, UserData } from '../types/index';
 import { getGenesisStatus, getUserData } from '../utils/web3';
-import { formatBigInt, formatTime } from '../utils/formatting';
+import { formatBigInt } from '../utils/formatting';
 import { useWallet } from '../context/WalletContext';
 import { useNetwork } from '../context/NetworkContext';
 import { ensureChain } from '../utils/chainSwitch';
 import { createNetworkPublicClient } from '../utils/publicClient';
-import { createWalletClient, custom } from 'viem';
+import { createWalletClient, custom, type Address } from 'viem';
 import { GENESIS_ABI } from '../config/contracts';
 
-interface GenesisProps {
-  walletAddress?: string | null;
-  isWalletConnected?: boolean;
+type Action = 'participate' | 'finalize' | 'claim';
+
+const GENESIS_ALLOCATION_WEI = 50n * 10n ** 18n;
+
+function errorMessage(error: unknown): string {
+  const e = error as { shortMessage?: string; message?: string };
+  return e?.shortMessage || e?.message || 'Transaction failed';
 }
 
-export function Genesis(_props?: GenesisProps) {
-  const { walletAddress: address, isConnected } = useWallet();
+function formatCountdown(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return d > 0 ? `${d}d ${pad(h)}h ${pad(m)}m ${pad(sec)}s` : `${pad(h)}h ${pad(m)}m ${pad(sec)}s`;
+}
+
+function Tile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="p-4 rounded-md border border-platinum bg-platinum">
+      <p className="text-xs text-muted font-medium uppercase">{label}</p>
+      <p className="text-lg font-bold mt-3 tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function Panel({ title, children, dark = false }: { title: string; children?: React.ReactNode; dark?: boolean }) {
+  return (
+    <div className={`p-4 rounded-md ${dark ? 'bg-navy' : 'border border-platinum bg-platinum'}`}>
+      <p className={`text-sm font-semibold ${dark ? 'text-white' : 'text-navy'}`}>{title}</p>
+      {children && <p className={`text-xs mt-1 ${dark ? 'text-white/75' : 'text-muted'}`}>{children}</p>}
+    </div>
+  );
+}
+
+export function Genesis() {
+  const { walletAddress: address, isConnected, isConnecting, connect } = useWallet();
   const { network } = useNetwork();
 
   const [status, setStatus] = useState<GenesisStatus | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [finalizingLoading, setFinalizingLoading] = useState(false);
+  const [action, setAction] = useState<Action | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [whitelistProofs, setWhitelistProofs] = useState<Record<string, `0x${string}`[]> | null>(null);
+  // Local end time derived from the contract's `remaining`, so the countdown
+  // ticks every second without hitting the RPC.
+  const [endsAt, setEndsAt] = useState<number | null>(null);
+  const [nowSec, setNowSec] = useState(() => Date.now() / 1000);
 
-  const publicClient = createNetworkPublicClient(network);
+  const publicClient = useMemo(() => createNetworkPublicClient(network), [network]);
 
   useEffect(() => {
     let isMounted = true;
@@ -43,153 +79,93 @@ export function Genesis(_props?: GenesisProps) {
     };
   }, []);
 
-  // Merkle proofs are keyed by checksummed address in whitelist-tree.json;
-  // normalize the lookup so casing never causes a false "not whitelisted".
+  // Proofs are keyed by checksummed address; compare case-insensitively.
   const myProof = address && whitelistProofs
     ? Object.entries(whitelistProofs).find(([addr]) => addr.toLowerCase() === address.toLowerCase())?.[1] ?? null
     : null;
   const isWhitelisted = myProof !== null;
 
+  const refresh = useCallback(async () => {
+    const [statusData, user] = await Promise.all([
+      getGenesisStatus(publicClient, network.contracts),
+      isConnected && address ? getUserData(publicClient, address, network.contracts) : Promise.resolve(null),
+    ]);
+    // A failed read returns null; keep what is on screen instead of blanking it.
+    if (statusData) {
+      setStatus(statusData);
+      setEndsAt(statusData.open ? Date.now() / 1000 + Number(statusData.remaining) : null);
+    }
+    if (user) setUserData(user);
+    if (!isConnected) setUserData(null);
+    setLoading(false);
+  }, [publicClient, network.contracts, isConnected, address]);
+
+  // Only a network switch clears the screen. Connecting a wallet just adds
+  // user data on top, so the card never disappears and reappears.
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchData = async () => {
-      try {
-        const [statusData, userDataResult] = await Promise.all([
-          getGenesisStatus(publicClient, network.contracts),
-          isConnected && address ? getUserData(publicClient, address as any, network.contracts) : Promise.resolve(null),
-        ]);
-
-        if (isMounted) {
-          setStatus((prev) => {
-            // Only update if values actually changed to avoid re-renders
-            if (prev && statusData &&
-                prev.open === statusData.open &&
-                prev.done === statusData.done &&
-                prev.remaining === statusData.remaining &&
-                prev.participants === statusData.participants) {
-              return prev;
-            }
-            return statusData;
-          });
-
-          setUserData((prev) => {
-            // Only update if values actually changed
-            if (prev && userDataResult &&
-                prev.genesisAllocation === userDataResult.genesisAllocation &&
-                prev.genesisClaimed === userDataResult.genesisClaimed &&
-                prev.genesisClaimable === userDataResult.genesisClaimable) {
-              return prev;
-            }
-            return userDataResult;
-          });
-
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error fetching Genesis data:', error);
-      }
-    };
-
-    // Initial load
     setLoading(true);
-    fetchData();
+    setStatus(null);
+    setUserData(null);
+  }, [network]);
 
-    // Polling without setLoading to prevent flickering
-    const interval = setInterval(fetchData, 30000); // Increased to 30s to reduce updates
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
-  }, [isConnected, address, network]);
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    return () => clearInterval(interval);
+  }, [refresh]);
 
-  const getWalletClient = async () => {
-    if (!window.ethereum) throw new Error('MetaMask not installed');
-    await ensureChain(network.chain);
-    return createWalletClient({ chain: network.chain, transport: custom(window.ethereum) });
-  };
+  const secondsLeft = endsAt === null ? 0 : endsAt - nowSec;
 
-  const handleParticipate = async () => {
-    if (!isConnected || !address || !myProof) return;
-    setActionLoading(true);
+  useEffect(() => {
+    if (endsAt === null) return;
+    const tick = setInterval(() => setNowSec(Date.now() / 1000), 1000);
+    return () => clearInterval(tick);
+  }, [endsAt]);
+
+  // When the local countdown runs out, re-read so the Finalize button appears.
+  const countdownDone = endsAt !== null && secondsLeft <= 0;
+  useEffect(() => {
+    if (countdownDone) refresh();
+  }, [countdownDone, refresh]);
+
+  const send = async (kind: Action, label: string, functionName: 'participate' | 'finalize' | 'claim', args: readonly unknown[]) => {
+    if (!address) return;
+    setAction(kind);
+    setNotice(null);
     try {
-      const walletClient = await getWalletClient();
-      const hash = await walletClient.writeContract({
-        account: address as any,
-        address: network.contracts.GENESIS as any,
+      if (!window.ethereum) throw new Error('No wallet extension detected');
+      await ensureChain(network.chain);
+      const wallet = createWalletClient({ chain: network.chain, transport: custom(window.ethereum) });
+      const hash = await wallet.writeContract({
+        account: address as Address,
+        chain: network.chain,
+        address: network.contracts.GENESIS as Address,
         abi: GENESIS_ABI,
-        functionName: 'participate',
-        args: [myProof],
-      });
+        functionName,
+        args,
+      } as Parameters<typeof wallet.writeContract>[0]);
       await publicClient.waitForTransactionReceipt({ hash });
-
-      const updatedStatus = await getGenesisStatus(publicClient, network.contracts);
-      const updatedUserData = await getUserData(publicClient, address as any, network.contracts);
-      setStatus(updatedStatus);
-      setUserData(updatedUserData);
+      setNotice({ kind: 'ok', text: `${label} confirmed.` });
     } catch (error) {
-      console.error('Error participating:', error);
-      if (error instanceof Error) {
-        alert(`Participate failed: ${error.message}`);
-      }
+      console.error(`${label} failed:`, error);
+      setNotice({ kind: 'error', text: `${label} failed: ${errorMessage(error)}` });
     } finally {
-      setActionLoading(false);
+      setAction(null);
+      await refresh();
     }
   };
 
-  const handleClaim = async () => {
-    if (!isConnected || !address) return;
-    setActionLoading(true);
-    try {
-      const walletClient = await getWalletClient();
-      const hash = await walletClient.writeContract({
-        account: address as any,
-        address: network.contracts.GENESIS as any,
-        abi: GENESIS_ABI,
-        functionName: 'claim',
-        args: [],
-      });
-      await publicClient.waitForTransactionReceipt({ hash });
+  if (!network.contracts.GENESIS) {
+    return (
+      <div className="card">
+        <div className="card-body">
+          <p className="text-navy">No Genesis contract configured for {network.label}. Switch networks above or deploy from the Deploy page.</p>
+        </div>
+      </div>
+    );
+  }
 
-      const updatedUserData = await getUserData(publicClient, address as any, network.contracts);
-      setUserData(updatedUserData);
-    } catch (error) {
-      console.error('Error claiming:', error);
-      if (error instanceof Error) {
-        alert(`Claim failed: ${error.message}`);
-      }
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleFinalize = async () => {
-    if (!isConnected || !address) return;
-    setFinalizingLoading(true);
-    try {
-      const walletClient = await getWalletClient();
-      const hash = await walletClient.writeContract({
-        account: address as any,
-        address: network.contracts.GENESIS as any,
-        abi: GENESIS_ABI,
-        functionName: 'finalize',
-        args: [],
-      });
-      await publicClient.waitForTransactionReceipt({ hash });
-
-      const updatedStatus = await getGenesisStatus(publicClient, network.contracts);
-      setStatus(updatedStatus);
-    } catch (error) {
-      console.error('Error finalizing:', error);
-      if (error instanceof Error) {
-        alert(`Finalize failed: ${error.message}`);
-      }
-    } finally {
-      setFinalizingLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (loading && !status) {
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-6 animate-pulse">
         <div className="h-6 bg-gray-200 rounded w-24 mb-4"></div>
@@ -204,149 +180,140 @@ export function Genesis(_props?: GenesisProps) {
   if (!status) {
     return (
       <div className="card">
-        <div className="card-body">
-          <p className="text-navy">
-            {network.contracts.GENESIS
-              ? 'Failed to load Genesis data'
-              : `No Genesis contract configured for ${network.label}. Switch networks above or deploy from the Deploy page.`}
-          </p>
+        <div className="card-body space-y-3">
+          <p className="text-navy">Failed to load Genesis data.</p>
+          <button onClick={() => refresh()} className="btn btn-secondary text-sm">Retry</button>
         </div>
       </div>
     );
   }
 
+  const isClosed = status.done;
+  const timeEnded = !status.done && !status.open;
+  const participants = status.participants;
+  const estimatedShare = participants > 0n ? GENESIS_ALLOCATION_WEI / participants : GENESIS_ALLOCATION_WEI;
+
+  const connectButton = (text: string) => (
+    <button
+      onClick={() => connect().catch((e) => console.error(e))}
+      disabled={isConnecting}
+      className="w-full btn btn-primary py-3 font-semibold disabled:opacity-50"
+    >
+      {isConnecting ? 'Connecting...' : text}
+    </button>
+  );
+
   return (
     <div className="card">
       <div className="card-header">
-        <h2 className="text-xl font-bold mb-0">Genesis Event</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-bold mb-0">Genesis Event</h2>
+          <span className={`text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-sm ${isClosed ? 'bg-platinum text-navy' : 'bg-navy text-white'}`}>
+            {isClosed ? 'Closed' : 'Open'}
+          </span>
+        </div>
       </div>
+
       <div className="card-body space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="p-4 rounded-md border border-platinum bg-platinum">
-            <p className="text-xs text-muted font-medium uppercase">Status</p>
-            <p className="text-lg font-bold mt-3">
-              {status.done ? 'Finalized' : status.open ? 'Open' : 'Closed'}
-            </p>
-          </div>
-          <div className="p-4 rounded-md border border-platinum bg-platinum">
-            <p className="text-xs text-muted font-medium uppercase">Time Remaining</p>
-            <p className="text-lg font-bold mt-3">
-              {status.open ? formatTime(status.remaining) : 'N/A'}
-            </p>
-          </div>
-          <div className="p-4 rounded-md border border-platinum bg-platinum">
-            <p className="text-xs text-muted font-medium uppercase">Participants</p>
-            <p className="text-lg font-bold mt-3">{status.participants.toString()}</p>
-          </div>
-          <div className="p-4 rounded-md border border-platinum bg-platinum">
-            <p className="text-xs text-muted font-medium uppercase">Your Allocation</p>
-            <p className="text-lg font-bold mt-3">
-              {userData && userData.genesisAllocation !== 0n
-                ? `${formatBigInt(userData.genesisAllocation)} AGB`
-                : 'N/A'}
-            </p>
-          </div>
+          <Tile label="Status" value={isClosed ? 'Closed' : timeEnded ? 'Ended' : 'Open'} />
+          <Tile label="Time Remaining" value={status.open ? formatCountdown(secondsLeft) : timeEnded ? 'Awaiting finalize' : '—'} />
+          <Tile label="Participants" value={participants.toString()} />
+          <Tile
+            label={isClosed ? 'Your Allocation' : 'Share per Wallet'}
+            value={
+              isClosed
+                ? userData && userData.genesisAllocation !== 0n ? `${formatBigInt(userData.genesisAllocation)} AGB` : '—'
+                : `≈ ${formatBigInt(estimatedShare)} AGB`
+            }
+          />
         </div>
 
-        {/* Open Mode */}
-        {status.open && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-md border border-platinum bg-platinum">
-              <p className="text-sm font-semibold text-navy">Open — Participate in Genesis</p>
-              <p className="text-xs text-muted mt-1">Connect your wallet to participate and earn genesis allocation</p>
-            </div>
-
-            {!isConnected && (
-              <div className="p-4 rounded-md border border-platinum-dark bg-white">
-                <p className="text-sm text-muted">Connect your wallet to participate in Genesis</p>
-              </div>
-            )}
-
-            {isConnected && userData && whitelistProofs && (
-              <div className="space-y-3">
-                {!userData.genesisEligible && isWhitelisted && (
-                  <button
-                    onClick={handleParticipate}
-                    disabled={actionLoading}
-                    className="w-full btn btn-primary py-3 font-semibold disabled:opacity-50"
-                  >
-                    {actionLoading ? 'Participating...' : 'Participate'}
-                  </button>
-                )}
-
-                {!userData.genesisEligible && !isWhitelisted && (
-                  <div className="p-4 rounded-md border border-platinum-dark bg-white">
-                    <p className="text-sm font-semibold text-navy">This wallet is not on the Genesis whitelist</p>
-                    <p className="text-xs text-muted mt-1">The whitelist is fixed and cannot be changed after deployment.</p>
-                  </div>
-                )}
-
-                {userData.genesisEligible && (
-                  <div className="p-4 rounded-md border border-platinum bg-platinum">
-                    <p className="text-sm font-semibold text-navy">You are registered for Genesis</p>
-                    <p className="text-xs text-muted mt-1">Wait for the event to close and then finalize</p>
-                  </div>
-                )}
-              </div>
-            )}
+        {notice && (
+          <div className={`alert mb-0 ${notice.kind === 'error' ? 'alert-danger' : 'alert-primary'}`} role="status">
+            {notice.text}
           </div>
         )}
 
-        {/* Closed Mode */}
-        {!status.open && !status.done && (
+        {/* OPEN MODE: participate while the window runs, finalize once time is up */}
+        {!isClosed && (
           <div className="space-y-4">
-            <div className="p-4 rounded-md bg-navy">
-              <p className="text-sm font-semibold text-white">Closed — Waiting to Finalize</p>
-              <p className="text-xs mt-1 text-white/75">The Genesis event has closed. An admin will finalize it soon.</p>
-            </div>
+            {status.open ? (
+              <>
+                <Panel title="Open — Participate in Genesis">
+                  Whitelisted wallets register once for free (gas only). The 50 AGB Genesis allocation is split equally between all participants.
+                </Panel>
 
-            {isConnected && (
-              <button
-                onClick={handleFinalize}
-                disabled={finalizingLoading}
-                className="w-full btn btn-primary py-3 font-semibold disabled:opacity-50"
-              >
-                {finalizingLoading ? 'Finalizing...' : 'Finalize Genesis'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Finalized Mode */}
-        {status.done && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-md border border-platinum bg-platinum">
-              <p className="text-sm font-semibold text-navy">Finalized — Claim Your Allocation</p>
-              <p className="text-xs text-muted mt-1">The Genesis event is complete. You can now claim your allocation.</p>
-            </div>
-
-            {!isConnected && (
-              <div className="p-4 rounded-md border border-platinum-dark bg-white">
-                <p className="text-sm text-muted">Connect your wallet to claim your allocation</p>
-              </div>
-            )}
-
-            {isConnected && userData && (
-              <div className="space-y-3">
-                {userData.genesisClaimed ? (
-                  <div className="p-4 rounded-md border border-platinum bg-platinum">
-                    <p className="text-sm font-semibold text-navy">Claimed — You have claimed your Genesis allocation</p>
-                    <p className="text-xs text-muted mt-1">Amount: {formatBigInt(userData.genesisAllocation)} AGB</p>
-                  </div>
-                ) : userData.genesisClaimable !== 0n ? (
+                {!isConnected ? (
+                  connectButton('Connect Wallet to Participate')
+                ) : !whitelistProofs || !userData ? (
+                  <p className="text-sm text-muted">Checking your wallet…</p>
+                ) : userData.genesisEligible ? (
+                  <Panel title="You are registered for Genesis">
+                    Come back when the timer ends to finalize, then claim your allocation.
+                  </Panel>
+                ) : isWhitelisted ? (
                   <button
-                    onClick={handleClaim}
-                    disabled={actionLoading}
+                    onClick={() => send('participate', 'Participate', 'participate', [myProof])}
+                    disabled={action !== null}
                     className="w-full btn btn-primary py-3 font-semibold disabled:opacity-50"
                   >
-                    {actionLoading ? 'Claiming...' : `Claim ${formatBigInt(userData.genesisClaimable)} AGB`}
+                    {action === 'participate' ? 'Participating...' : 'Participate'}
                   </button>
                 ) : (
-                  <div className="p-4 rounded-md border border-platinum-dark bg-white">
-                    <p className="text-sm text-muted">No claimable amount available</p>
-                  </div>
+                  <Panel title="This wallet is not on the Genesis whitelist">
+                    The whitelist is fixed and cannot be changed after deployment.
+                  </Panel>
                 )}
-              </div>
+              </>
+            ) : (
+              <>
+                <Panel title="Time is up — Finalize Genesis" dark>
+                  The participation window has ended. Anyone can finalize; once finalized, participants can claim.
+                </Panel>
+                {!isConnected ? (
+                  connectButton('Connect Wallet to Finalize')
+                ) : (
+                  <button
+                    onClick={() => send('finalize', 'Finalize', 'finalize', [])}
+                    disabled={action !== null}
+                    className="w-full btn btn-primary py-3 font-semibold disabled:opacity-50"
+                  >
+                    {action === 'finalize' ? 'Finalizing...' : 'Finalize Genesis'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* CLOSED MODE: claim */}
+        {isClosed && (
+          <div className="space-y-4">
+            <Panel title="Closed — Claim Your Allocation">
+              Genesis is finalized with {participants.toString()} participant{participants === 1n ? '' : 's'}. Each one can claim an equal share.
+            </Panel>
+
+            {!isConnected ? (
+              connectButton('Connect Wallet to Claim')
+            ) : !userData ? (
+              <p className="text-sm text-muted">Checking your wallet…</p>
+            ) : userData.genesisClaimed ? (
+              <Panel title="Claimed">
+                You have claimed {formatBigInt(userData.genesisAllocation)} AGB.
+              </Panel>
+            ) : userData.genesisClaimable !== 0n ? (
+              <button
+                onClick={() => send('claim', 'Claim', 'claim', [])}
+                disabled={action !== null}
+                className="w-full btn btn-primary py-3 font-semibold disabled:opacity-50"
+              >
+                {action === 'claim' ? 'Claiming...' : `Claim ${formatBigInt(userData.genesisClaimable)} AGB`}
+              </button>
+            ) : (
+              <Panel title="Nothing to claim">
+                This wallet did not participate in Genesis.
+              </Panel>
             )}
           </div>
         )}

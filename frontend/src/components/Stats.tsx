@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ContractStats } from '../types/index';
 import { getContractStats } from '../utils/web3';
-import { formatCompact, formatBigInt, formatWithDecimals } from '../utils/formatting';
+import { formatCompact, formatBigInt, formatWithDecimals, formatBigIntNoFloat } from '../utils/formatting';
 import { createNetworkPublicClient } from '../utils/publicClient';
 import { useNetwork } from '../context/NetworkContext';
 
@@ -73,12 +73,18 @@ export function Stats() {
           publicClient.getBlock(),
         ]);
         if (!isMounted) return;
+        // A failed poll returns null. Keep the last good numbers instead of
+        // dropping back to the skeleton, which made the cards blink out.
+        if (!data) {
+          setLoading(false);
+          return;
+        }
         setStats(data);
         // The halving schedule runs on block.timestamp, so count down against
         // the chain's clock rather than the viewer's local clock.
         setChainTime(latestBlock.timestamp);
 
-        if (data) {
+        {
           const totalStaked = Number(data.totalStaked) / 1e18;
           const emissionPerSecond = Number(data.emissionPerSecond) / 1e18;
           const annualEmission = emissionPerSecond * SECONDS_PER_YEAR;
@@ -165,8 +171,12 @@ export function Stats() {
         />
         <StatCard
           label="Current Epoch"
-          value={(stats.currentEpoch + 1n).toString()}
-          subtext={`${formatWithDecimals(stats.emissionPerSecond, 18)} AGB/second`}
+          value={`Epoch ${(stats.currentEpoch + 1n).toString()}`}
+          subtext={
+            stats.emissionPerSecond === 0n
+              ? 'Emission not started'
+              : `${formatBigIntNoFloat(stats.emissionPerSecond * 86400n)} AGB/day · ${formatWithDecimals(stats.emissionPerSecond)} AGB/sec`
+          }
         />
         {(() => {
           if (stats.nextHalvingTime === 0n) {

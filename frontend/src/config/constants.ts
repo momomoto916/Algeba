@@ -1,6 +1,9 @@
 // Reown configuration - Read from environment or use default
 export const REOWN_PROJECT_ID = import.meta.env.VITE_REOWN_PROJECT_ID || '1be41507b1e49aba1030c3d5d8bdefcd';
 
+// Public source code repository (footer "Open Source" link)
+export const REPO_URL = 'https://github.com/momomoto916/Algeba';
+
 // Wallet allowed to access the /deploy page and nav item
 export const DEPLOYER_WALLET = import.meta.env.VITE_DEPLOYER_WALLET || '';
 
